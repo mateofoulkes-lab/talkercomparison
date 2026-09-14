@@ -23,10 +23,11 @@
         <button id="playPause" class="primary" disabled>▶ Reproducir</button>
         <button id="restart" disabled>↺ Reiniciar</button>
         <button id="generatePanto" class="primary" disabled>Generar PantoMatrix / EMAGE</button>
+        <button id="generateTango" class="primary" disabled>Generar TANGO</button>
         <span id="fileName" class="file-name">Sin audio</span>
       </div>
       <div class="timeline-row"><span id="currentTime">00:00.0</span><input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled /><span id="duration">00:00.0</span></div>
-      <div id="backendStatus" class="file-name">PantoMatrix: listo para conectar al Space oficial.</div>
+      <div id="backendStatus" class="file-name">Backends reales: EMAGE + TANGO listos para conectar a sus Spaces oficiales.</div>
       <audio id="audio" preload="metadata"></audio>
     </section>
 
@@ -40,7 +41,7 @@
     <section id="grid" class="comparison-grid"></section>
 
     <section class="panel format-panel">
-      <div><p class="eyebrow">Formato común</p><h2>Importar movimiento real</h2><p>El primer backend real usa el Space oficial de EMAGE. También podés cargar JSON común manualmente.</p></div>
+      <div><p class="eyebrow">Formato común</p><h2>Importar movimiento real</h2><p>EMAGE y TANGO usan sus Spaces oficiales. Ambos se normalizan al mismo rig; también podés cargar JSON común manualmente.</p></div>
       <label class="upload secondary-upload"><input id="motionFile" type="file" accept="application/json,.json" multiple /><span>Cargar JSON de movimiento</span></label>
     </section>
 
@@ -51,5 +52,6 @@
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","@gradio/client":"https://cdn.jsdelivr.net/npm/@gradio/client@2.5.1/dist/index.js","fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"}}
   </script>
   <script type="module" src="app.js"></script>
+  <script type="module" src="tango.js"></script>
 </body>
 </html>
