@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Talker Comparison</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Speech-driven gesture benchmark</p>
+        <h1>Talker Comparison</h1>
+        <p class="subtitle">Un audio. Varios generadores. El mismo esqueleto y la misma cámara.</p>
+      </div>
+      <div class="badge">Mikves Lab</div>
+    </header>
+
+    <section class="panel audio-panel">
+      <div class="audio-row">
+        <label class="upload">
+          <input id="audioFile" type="file" accept="audio/*" />
+          <span>Cargar audio</span>
+        </label>
+        <button id="playPause" class="primary" disabled>▶ Reproducir</button>
+        <button id="restart" disabled>↺ Reiniciar</button>
+        <span id="fileName" class="file-name">Sin audio</span>
+      </div>
+
+      <div class="timeline-row">
+        <span id="currentTime">00:00.0</span>
+        <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled />
+        <span id="duration">00:00.0</span>
+      </div>
+      <audio id="audio" preload="metadata"></audio>
+    </section>
+
+    <section class="panel controls">
+      <div class="control-group">
+        <label>Vista</label>
+        <div class="segmented">
+          <button data-view="front" class="view-button active">Frente</button>
+          <button data-view="side" class="view-button">Perfil</button>
+          <button data-view="threequarter" class="view-button">¾</button>
+        </div>
+      </div>
+      <label class="check"><input id="showTrails" type="checkbox" /> Trails de manos</label>
+      <label class="check"><input id="showRoot" type="checkbox" checked /> Root</label>
+      <label class="slider-label">Intensidad <input id="globalIntensity" type="range" min="0" max="2" value="1" step="0.05" /><span id="intensityValue">1.00×</span></label>
+    </section>
+
+    <section id="grid" class="comparison-grid"></section>
+
+    <section class="panel format-panel">
+      <div>
+        <p class="eyebrow">Formato común</p>
+        <h2>Importar movimiento real</h2>
+        <p>Cada generador puede convertirse a un JSON común. La web ya puede cargarlo y reproducirlo sincronizado con el audio.</p>
+      </div>
+      <label class="upload secondary-upload">
+        <input id="motionFile" type="file" accept="application/json,.json" multiple />
+        <span>Cargar JSON de movimiento</span>
+      </label>
+    </section>
+
+    <footer>
+      <span>Procedural previews ≠ output de los modelos. Los adapters reales se conectan después.</span>
+    </footer>
+  </main>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
