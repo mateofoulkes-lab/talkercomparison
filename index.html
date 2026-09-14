@@ -19,34 +19,19 @@
 
     <section class="panel audio-panel">
       <div class="audio-row">
-        <label class="upload">
-          <input id="audioFile" type="file" accept="audio/*" />
-          <span>Cargar audio</span>
-        </label>
+        <label class="upload"><input id="audioFile" type="file" accept="audio/*" /><span>Cargar audio</span></label>
         <button id="playPause" class="primary" disabled>▶ Reproducir</button>
         <button id="restart" disabled>↺ Reiniciar</button>
         <button id="generatePanto" class="primary" disabled>Generar PantoMatrix / EMAGE</button>
         <span id="fileName" class="file-name">Sin audio</span>
       </div>
-
-      <div class="timeline-row">
-        <span id="currentTime">00:00.0</span>
-        <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled />
-        <span id="duration">00:00.0</span>
-      </div>
+      <div class="timeline-row"><span id="currentTime">00:00.0</span><input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled /><span id="duration">00:00.0</span></div>
       <div id="backendStatus" class="file-name">PantoMatrix: listo para conectar al Space oficial.</div>
       <audio id="audio" preload="metadata"></audio>
     </section>
 
     <section class="panel controls">
-      <div class="control-group">
-        <label>Vista</label>
-        <div class="segmented">
-          <button data-view="front" class="view-button active">Frente</button>
-          <button data-view="side" class="view-button">Perfil</button>
-          <button data-view="threequarter" class="view-button">¾</button>
-        </div>
-      </div>
+      <div class="control-group"><label>Vista</label><div class="segmented"><button data-view="front" class="view-button active">Frente</button><button data-view="side" class="view-button">Perfil</button><button data-view="threequarter" class="view-button">¾</button></div></div>
       <label class="check"><input id="showTrails" type="checkbox" /> Trails de manos</label>
       <label class="check"><input id="showRoot" type="checkbox" checked /> Root</label>
       <label class="slider-label">Intensidad <input id="globalIntensity" type="range" min="0" max="2" value="1" step="0.05" /><span id="intensityValue">1.00×</span></label>
@@ -55,30 +40,15 @@
     <section id="grid" class="comparison-grid"></section>
 
     <section class="panel format-panel">
-      <div>
-        <p class="eyebrow">Formato común</p>
-        <h2>Importar movimiento real</h2>
-        <p>El primer backend real usa el Space oficial de EMAGE. También podés cargar JSON común manualmente.</p>
-      </div>
-      <label class="upload secondary-upload">
-        <input id="motionFile" type="file" accept="application/json,.json" multiple />
-        <span>Cargar JSON de movimiento</span>
-      </label>
+      <div><p class="eyebrow">Formato común</p><h2>Importar movimiento real</h2><p>El primer backend real usa el Space oficial de EMAGE. También podés cargar JSON común manualmente.</p></div>
+      <label class="upload secondary-upload"><input id="motionFile" type="file" accept="application/json,.json" multiple /><span>Cargar JSON de movimiento</span></label>
     </section>
 
-    <footer>
-      <span>Los slots sin datos reales muestran el mismo idle neutro. Nunca se comparan placeholders como si fueran salidas de modelos.</span>
-    </footer>
+    <footer><span>Los slots sin datos reales muestran el mismo idle neutro. Nunca se comparan placeholders como si fueran salidas de modelos.</span></footer>
   </main>
 
   <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-      "@gradio/client": "https://cdn.jsdelivr.net/npm/@gradio/client@1.21.0/+esm",
-      "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm"
-    }
-  }
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","@gradio/client":"https://cdn.jsdelivr.net/npm/@gradio/client@2.5.1/dist/index.js","fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"}}
   </script>
   <script type="module" src="app.js"></script>
 </body>
