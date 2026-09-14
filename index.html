@@ -27,7 +27,7 @@
         <span id="fileName" class="file-name">Sin audio</span>
       </div>
       <div class="timeline-row"><span id="currentTime">00:00.0</span><input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled /><span id="duration">00:00.0</span></div>
-      <div id="backendStatus" class="file-name">Backends reales: EMAGE + TANGO listos para conectar a sus Spaces oficiales.</div>
+      <div id="backendStatus" class="file-name">EMAGE y TANGO procesan también audios largos: se segmentan automáticamente y se suavizan las uniones.</div>
       <audio id="audio" preload="metadata"></audio>
     </section>
 
@@ -41,11 +41,11 @@
     <section id="grid" class="comparison-grid"></section>
 
     <section class="panel format-panel">
-      <div><p class="eyebrow">Formato común</p><h2>Importar movimiento real</h2><p>EMAGE y TANGO usan sus Spaces oficiales. Ambos se normalizan al mismo rig; también podés cargar JSON común manualmente.</p></div>
+      <div><p class="eyebrow">Formato común</p><h2>Importar movimiento real</h2><p>EMAGE y TANGO usan sus Spaces oficiales. Para audios largos, la web divide, procesa y mezcla los tramos automáticamente.</p></div>
       <label class="upload secondary-upload"><input id="motionFile" type="file" accept="application/json,.json" multiple /><span>Cargar JSON de movimiento</span></label>
     </section>
 
-    <footer><span>Los slots sin datos reales muestran el mismo idle neutro. Nunca se comparan placeholders como si fueran salidas de modelos.</span></footer>
+    <footer><span>EMAGE: tramos de hasta 58 s con 2 s de solapamiento. TANGO público: tramos de 7,5 s con 1 s de solapamiento.</span></footer>
   </main>
 
   <script type="importmap">
@@ -53,5 +53,6 @@
   </script>
   <script type="module" src="app.js"></script>
   <script type="module" src="tango.js"></script>
+  <script type="module" src="backend-hotfix.js"></script>
 </body>
 </html>
