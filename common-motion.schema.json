@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://talkercomparison.local/common-motion.schema.json",
+  "title": "Talker Comparison Common Motion",
+  "type": "object",
+  "required": ["fps", "frames"],
+  "properties": {
+    "model": {
+      "type": "string",
+      "description": "Optional target slot: pantomatrix, streamtalk, unicamp, dlp3d, freeform or custom"
+    },
+    "fps": { "type": "number", "exclusiveMinimum": 0 },
+    "source": { "type": "string" },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["joints"],
+        "properties": {
+          "root": {
+            "type": "object",
+            "properties": {
+              "position": { "$ref": "#/$defs/vec3" }
+            }
+          },
+          "joints": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/joint" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"}],
+      "items": false
+    },
+    "quat": {
+      "type": "array",
+      "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}],
+      "items": false
+    },
+    "joint": {
+      "type": "object",
+      "properties": {
+        "rotation": { "$ref": "#/$defs/quat" },
+        "position": { "$ref": "#/$defs/vec3" }
+      }
+    }
+  }
+}
