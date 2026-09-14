@@ -25,6 +25,7 @@
         </label>
         <button id="playPause" class="primary" disabled>▶ Reproducir</button>
         <button id="restart" disabled>↺ Reiniciar</button>
+        <button id="generatePanto" class="primary" disabled>Generar PantoMatrix / EMAGE</button>
         <span id="fileName" class="file-name">Sin audio</span>
       </div>
 
@@ -33,6 +34,7 @@
         <input id="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled />
         <span id="duration">00:00.0</span>
       </div>
+      <div id="backendStatus" class="file-name">PantoMatrix: listo para conectar al Space oficial.</div>
       <audio id="audio" preload="metadata"></audio>
     </section>
 
@@ -56,7 +58,7 @@
       <div>
         <p class="eyebrow">Formato común</p>
         <h2>Importar movimiento real</h2>
-        <p>Cada generador puede convertirse a un JSON común. La web ya puede cargarlo y reproducirlo sincronizado con el audio.</p>
+        <p>El primer backend real usa el Space oficial de EMAGE. También podés cargar JSON común manualmente.</p>
       </div>
       <label class="upload secondary-upload">
         <input id="motionFile" type="file" accept="application/json,.json" multiple />
@@ -65,14 +67,16 @@
     </section>
 
     <footer>
-      <span>Procedural previews ≠ output de los modelos. Los adapters reales se conectan después.</span>
+      <span>Los slots sin datos reales muestran el mismo idle neutro. Nunca se comparan placeholders como si fueran salidas de modelos.</span>
     </footer>
   </main>
 
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "@gradio/client": "https://cdn.jsdelivr.net/npm/@gradio/client@1.21.0/+esm",
+      "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/+esm"
     }
   }
   </script>
