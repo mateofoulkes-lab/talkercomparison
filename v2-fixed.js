@@ -58,6 +58,8 @@ let footIK=false;
 const motionSettings={legs:1,body:1,smooth:0};
 const smoothQuats=new Map();
 let lastSmoothTime=null;
+const referenceQuats=new Map();
+let referenceTime=null;
 
 const footTargets={
   left:{position:null,rotation:null,groundY:null},
@@ -119,24 +121,43 @@ function resetSmoothing(){
   lastSmoothTime=null;
 }
 
-function adjustedLocalQuat(joint,A,B,alpha,jumped){
-  let local=qIdentity();
+function rawLocalQuat(A,B,alpha){
+  const local=qIdentity();
   if(A?.rotation&&B?.rotation){
     const qa=new THREE.Quaternion(...A.rotation),qb=new THREE.Quaternion(...B.rotation);
     local.copy(qa).slerp(qb,alpha).normalize();
   }
+  return local;
+}
 
-  // Atenuación: 0 = reposo, 1 = animación original.
-  // IMPORTANTE: no usar `local` como destino y fuente del mismo slerp,
-  // porque Three.js pisa el quaternion fuente al empezar la operación.
+function captureReferencePose(){
+  if(!motion)return;
+  const t=currentTime();
+  const s=sample(motion,t);if(!s)return;
+  referenceQuats.clear();
+  for(const joint of Object.keys(JOINT_PARENT)){
+    const A=s.a?.joints?.[joint],B=s.b?.joints?.[joint]||A;
+    referenceQuats.set(joint,rawLocalQuat(A,B,s.alpha));
+  }
+  referenceTime=t;
+  resetSmoothing();
+  $('#referenceInfo').textContent=`Referencia: ${formatTime(t)}`;
+  if(motion)applyMotion(motion,t);
+}
+
+function adjustedLocalQuat(joint,A,B,alpha,jumped){
+  const local=rawLocalQuat(A,B,alpha);
+
+  // 0 = frame de referencia elegido; 1 = animación original.
+  // Si todavía no se definió referencia, conserva el comportamiento anterior (T-pose/identidad).
   const gain=LEG_JOINTS.has(joint)?motionSettings.legs:motionSettings.body;
+  const reference=referenceQuats.get(joint)||qIdentity();
   const attenuated=new THREE.Quaternion().slerpQuaternions(
-    qIdentity(),
+    reference,
     local,
     THREE.MathUtils.clamp(gain,0,1)
   ).normalize();
 
-  // Suavizado temporal por joint. A 0 no altera en absoluto la animación original.
   const smooth=motionSettings.smooth;
   if(smooth<=0.001)return attenuated;
 
@@ -146,7 +167,6 @@ function adjustedLocalQuat(joint,A,B,alpha,jumped){
     return attenuated;
   }
 
-  // Cuanto mayor el slider, más lentamente sigue al frame nuevo.
   const follow=THREE.MathUtils.lerp(1,0.06,smooth);
   prev.slerp(attenuated,follow).normalize();
   return prev.clone();
@@ -301,6 +321,7 @@ $('#smoothGain').addEventListener('input',e=>{
   setMotionControl('smooth',e.target.value);
   $('#smoothGainValue').textContent=`${Math.round(motionSettings.smooth*100)}%`;
 });
+$('#setReferencePose').addEventListener('click',()=>captureReferencePose());
 $('#resetMotionControls').addEventListener('click',()=>{
   motionSettings.legs=1;motionSettings.body=1;motionSettings.smooth=0;
   $('#legsGain').value='1';$('#bodyGain').value='1';$('#smoothGain').value='0';
@@ -315,6 +336,8 @@ $('#motionFile').addEventListener('change',async e=>{
     const data=JSON.parse(await file.text());
     if(!Array.isArray(data.frames)||!data.frames.length)throw new Error('El JSON no contiene frames[]');
     motion=data;
+    referenceQuats.clear();referenceTime=null;
+    $('#referenceInfo').textContent='Referencia: T-pose (por defecto)';
     duration=data.frames.length/(Number(data.fps)||30);
     playing=false;seek(0);
     $('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;
