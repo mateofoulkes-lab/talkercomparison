@@ -17,6 +17,29 @@ La primera versión ya permite:
 
 Los movimientos que aparecen por defecto son **previews procedurales de referencia** para comprobar la UI y la sincronización. No son inferencias reales de PantoMatrix, StreamTalk, UNICAMP, DLP3D ni Free-form.
 
+## Colab
+
+### EMAGE — audio largo
+
+`colab/talkercomparison_pantomatrix.ipynb`
+
+Notebook para generar movimiento corporal con EMAGE desde audios largos sin depender de ZeroGPU.
+
+### Sherlock Holmes en Buenos Aires — Reel IA
+
+`colab/sherlock_buenos_aires_reel.ipynb`
+
+Pipeline de producción para Google Colab basado en **Wan 2.1 T2V 1.3B**:
+
+- 10 planos de ~5 s;
+- salida vertical nativa 480×832;
+- voz en off exacta en español;
+- overlays visuales de deducción desde el segundo 10;
+- guardado persistente en Google Drive y reanudación por plano;
+- montaje automático de un Reel final de 50 s a 1080×1920.
+
+El notebook arranca renderizando sólo el plano 1 para validar la GPU. Después puede configurarse para generar los 10 planos; los ya existentes se saltean automáticamente.
+
 ## Modelos previstos
 
 1. PantoMatrix / EMAGE
