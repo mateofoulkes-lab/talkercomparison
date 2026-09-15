@@ -49,7 +49,11 @@ let startedAt=0;
 let hasAudio=false;
 let audioUrl=null;
 let footIK=false;
-const footTargets={left:null,right:null};
+const footTargets={
+  left:{position:null,rotation:null,groundY:null},
+  right:{position:null,rotation:null,groundY:null}
+};
+const restFootGroundY={left:null,right:null};
 
 function resize(){const r=$('#viewer').getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(1,r.height);camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe($('#viewer'));resize();
@@ -82,6 +86,10 @@ new GLTFLoader().load(MODEL_URL,gltf=>{
   modelRoot.position.y-=box.min.y*scale;
   modelRoot.updateMatrixWorld(true);
   for(const [joint,b] of Object.entries(bones))restWorld[joint]=b.getWorldQuaternion(new THREE.Quaternion());
+  const leftRest=bones.leftFoot?.getWorldPosition(new THREE.Vector3());
+  const rightRest=bones.rightFoot?.getWorldPosition(new THREE.Vector3());
+  restFootGroundY.left=leftRest?.y??null;
+  restFootGroundY.right=rightRest?.y??null;
   const missing=Object.keys(JOINT_PARENT).filter(j=>!bones[j]);
   setStatus(missing.length?`Modelo listo · faltan ${missing.length} bones`:'Modelo listo · cargá JSON EMAGE',true);
   if(missing.length)console.warn('Human preview bones faltantes:',missing,allBones.map(b=>b.name));
@@ -138,9 +146,16 @@ function footWorld(side){
 function captureFootTargets(){
   if(!modelRoot)return;
   modelRoot.updateMatrixWorld(true);
-  const left=footWorld('left'),right=footWorld('right');
-  footTargets.left=left?left.clone():null;
-  footTargets.right=right?right.clone():null;
+  for(const side of ['left','right']){
+    const foot=bones[side==='left'?'leftFoot':'rightFoot'];
+    if(!foot)continue;
+    const p=foot.getWorldPosition(new THREE.Vector3());
+    p.y=restFootGroundY[side]??p.y;
+    footTargets[side].position=p;
+    // La orientación de reposo del Xbot ya tiene la planta plana.
+    footTargets[side].rotation=restWorld[side==='left'?'leftFoot':'rightFoot']?.clone()||foot.getWorldQuaternion(new THREE.Quaternion());
+    footTargets[side].groundY=p.y;
+  }
 }
 
 function rotateBoneToward(bone,effector,target){
@@ -156,20 +171,31 @@ function rotateBoneToward(bone,effector,target){
   bone.updateMatrixWorld(true);
 }
 
+function setBoneWorldRotation(bone,targetWorld){
+  if(!bone||!targetWorld)return;
+  const parentWorld=bone.parent?.getWorldQuaternion(new THREE.Quaternion())||qIdentity();
+  bone.quaternion.copy(parentWorld.invert().multiply(targetWorld)).normalize();
+  bone.updateMatrixWorld(true);
+}
+
 function solveLegIK(side,target){
-  if(!target)return;
+  if(!target?.position)return;
   const upper=bones[side==='left'?'leftUpperLeg':'rightUpperLeg'];
   const lower=bones[side==='left'?'leftLowerLeg':'rightLowerLeg'];
   const foot=bones[side==='left'?'leftFoot':'rightFoot'];
   if(!upper||!lower||!foot)return;
-  // CCD corto: parte siempre de la pose EMAGE y corrige solo muslo/rodilla.
-  for(let i=0;i<8;i++){
-    rotateBoneToward(lower,foot,target);
+  // CCD: parte de la pose EMAGE y corrige muslo/rodilla para llegar al tobillo clavado.
+  for(let i=0;i<10;i++){
+    rotateBoneToward(lower,foot,target.position);
     modelRoot.updateMatrixWorld(true);
-    rotateBoneToward(upper,foot,target);
+    rotateBoneToward(upper,foot,target.position);
     modelRoot.updateMatrixWorld(true);
-    if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target)<0.0015)break;
+    if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target.position)<0.0008)break;
   }
+  // Después del CCD anulamos por completo la rotación heredada de EMAGE en el pie.
+  // Queda con la misma orientación mundial de la pose de reposo: plano e inmóvil.
+  setBoneWorldRotation(foot,target.rotation);
+  modelRoot.updateMatrixWorld(true);
 }
 
 function solveFeetIK(){
@@ -222,7 +248,6 @@ $('#motionFile').addEventListener('change',async e=>{
     playing=false;seek(0);
     $('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;
     $('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;
-    $('#footIK').disabled=false;
     setStatus(`Movimiento listo · ${duration.toFixed(1)} s`,true);
     applyMotion(motion,0);
     if(footIK)captureFootTargets();
@@ -252,7 +277,7 @@ $('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*duration
 $('#footIK').addEventListener('change',e=>{
   footIK=e.target.checked;
   if(footIK&&motion){
-    // Captura los pies en la pose actual y desde ahi los mantiene clavados.
+    // Captura X/Z actuales, baja el pie a su altura de reposo y bloquea su rotación plana.
     applyMotion(motion,currentTime());
     captureFootTargets();
   }
