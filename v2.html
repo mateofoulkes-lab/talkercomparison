@@ -10,8 +10,8 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Mikves Lab · EMAGE · v2.8</p>
-        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.8</span></h1>
+        <p class="eyebrow">Mikves Lab · EMAGE · v2.9</p>
+        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.9</span></h1>
         <p class="subtitle">Preview fiel al Talker Comparison original. Audio opcional.</p>
       </div>
       <span id="modelStatus" class="status">Cargando Xbot…</span>
@@ -42,6 +42,27 @@
         </section>
 
         <section class="panel">
+          <h2>Movimiento</h2>
+          <label class="slider">
+            <span>Piernas</span>
+            <input id="legsGain" type="range" min="0" max="1" value="1" step="0.01" />
+            <b id="legsGainValue">100%</b>
+          </label>
+          <label class="slider">
+            <span>Resto del cuerpo</span>
+            <input id="bodyGain" type="range" min="0" max="1" value="1" step="0.01" />
+            <b id="bodyGainValue">100%</b>
+          </label>
+          <label class="slider">
+            <span>Suavizado</span>
+            <input id="smoothGain" type="range" min="0" max="1" value="0" step="0.01" />
+            <b id="smoothGainValue">0%</b>
+          </label>
+          <button id="resetMotionControls">Restablecer movimiento</button>
+          <p class="hint">Los atenuadores reducen la amplitud de la animación. El suavizado amortigua cambios bruscos entre frames sin modificar el JSON.</p>
+        </section>
+
+        <section class="panel">
           <h2>Estabilización</h2>
           <label class="toggle-row">
             <span>
@@ -53,8 +74,6 @@
           <button id="recaptureFeet">Volver a fijar pies acá</button>
           <p class="hint">El IK se aplica después de la animación EMAGE original. Mantiene cada pie en su punto y con la orientación plana de reposo.</p>
         </section>
-
-        <!-- Atenuadores deshabilitados temporalmente hasta validar el IK. -->
       </aside>
     </section>
   </main>
