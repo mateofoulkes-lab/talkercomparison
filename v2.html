@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EMAGE Preview V2</title>
+  <link rel="stylesheet" href="v2.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Mikves Lab · EMAGE</p>
+        <h1>EMAGE Preview V2</h1>
+        <p class="subtitle">Preview humano del movimiento generado por EMAGE. El audio es opcional.</p>
+      </div>
+      <span id="modelStatus" class="status">Cargando Xbot…</span>
+    </header>
+
+    <section class="workspace">
+      <div class="viewer-panel">
+        <div id="viewer" class="viewer"></div>
+        <div class="transport">
+          <button id="play" class="primary" disabled>▶ Reproducir</button>
+          <button id="restart" disabled>↺ Reiniciar</button>
+          <span id="timeNow">00:00.0</span>
+          <input id="timeline" type="range" min="0" max="1" step="0.0005" value="0" disabled />
+          <span id="timeTotal">00:00.0</span>
+        </div>
+      </div>
+
+      <aside class="controls">
+        <section class="panel">
+          <h2>Archivos</h2>
+          <label class="upload">
+            <span>JSON EMAGE</span>
+            <input id="motionFile" type="file" accept="application/json,.json" />
+          </label>
+          <div id="motionName" class="file-name">Sin movimiento</div>
+
+          <label class="upload optional">
+            <span>Audio opcional</span>
+            <input id="audioFile" type="file" accept="audio/*" />
+          </label>
+          <div id="audioName" class="file-name">Sin audio · usa reloj interno</div>
+          <button id="clearAudio" disabled>Quitar audio</button>
+          <audio id="audio" preload="metadata"></audio>
+        </section>
+
+        <section class="panel">
+          <h2>Atenuación</h2>
+          <label class="slider"><span>Global</span><input id="globalGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="globalGainValue">1.00×</b></label>
+          <label class="slider"><span>Torso</span><input id="torsoGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="torsoGainValue">1.00×</b></label>
+          <label class="slider"><span>Brazos</span><input id="armsGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="armsGainValue">1.00×</b></label>
+          <label class="slider"><span>Cabeza</span><input id="headGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="headGainValue">1.00×</b></label>
+          <label class="slider"><span>Piernas</span><input id="legsGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="legsGainValue">1.00×</b></label>
+          <label class="slider"><span>Suavizado</span><input id="smoothGain" type="range" min="0" max="0.92" value="0.15" step="0.01"><b id="smoothGainValue">0.15</b></label>
+          <button id="resetGains">Restablecer</button>
+        </section>
+
+        <section class="panel">
+          <h2>Estabilización</h2>
+          <label class="toggle-row">
+            <span><strong>Clavar pies al suelo</strong><small>IK de dos piernas tras aplicar EMAGE</small></span>
+            <input id="footIK" type="checkbox" />
+          </label>
+          <button id="recaptureFeet" disabled>Volver a fijar pies</button>
+          <p class="hint">Al activar IK, la posición actual de cada pie se convierte en su ancla. El solver corrige cadera/rodilla para mantenerlos ahí mientras el torso sigue gesticulando.</p>
+        </section>
+
+        <section class="panel">
+          <h2>Vista</h2>
+          <div class="segmented">
+            <button data-view="front" class="view active">Frente</button>
+            <button data-view="threequarter" class="view">¾</button>
+            <button data-view="side" class="view">Perfil</button>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
+  </script>
+  <script type="module" src="v2.js"></script>
+</body>
+</html>
