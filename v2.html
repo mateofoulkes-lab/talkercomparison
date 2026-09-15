@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EMAGE Preview V2</title>
-  <link rel="stylesheet" href="v2.css" />
+  <link rel="stylesheet" href="v2.css?v=2.12" />
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Mikves Lab · EMAGE · v2.11</p>
-        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.11</span></h1>
-        <p class="subtitle">Preview fiel al Talker Comparison original. Audio opcional.</p>
+        <p class="eyebrow">Mikves Lab · EMAGE · v2.12</p>
+        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.12</span></h1>
+        <p class="subtitle">Audio → EMAGE → ajuste → JSON final.</p>
       </div>
       <span id="modelStatus" class="status">Cargando Xbot…</span>
     </header>
@@ -31,7 +31,13 @@
 
       <aside class="controls">
         <section class="panel">
-          <h2>Archivos</h2>
+          <h2>1 · Generar con EMAGE</h2>
+          <button id="openColab" class="primary">Abrir notebook EMAGE en Colab</button>
+          <p class="hint">Abre el mismo notebook de Colab que usamos para generar el JSON EMAGE desde audio.</p>
+        </section>
+
+        <section class="panel">
+          <h2>2 · Archivos</h2>
           <label class="upload"><span>JSON EMAGE</span><input id="motionFile" type="file" accept="application/json,.json" /></label>
           <div id="motionName" class="file-name">Sin movimiento</div>
 
@@ -42,10 +48,10 @@
         </section>
 
         <section class="panel">
-          <h2>Movimiento</h2>
+          <h2>3 · Movimiento</h2>
           <button id="setReferencePose">Definir frame de referencia</button>
           <div id="referenceInfo" class="file-name" style="margin-top:8px;">Referencia: T-pose (por defecto)</div>
-          <p class="hint">Mové la timeline a una pose natural y guardala como referencia. Desde entonces, 0% significa esa pose y 100% la animación original.</p>
+          <p class="hint">Mové la timeline a una pose natural y guardala. 0% significa esa pose y 100% la animación original.</p>
           <label class="slider">
             <span>Piernas</span>
             <input id="legsGain" type="range" min="0" max="1" value="1" step="0.01" />
@@ -62,11 +68,10 @@
             <b id="smoothGainValue">0%</b>
           </label>
           <button id="resetMotionControls">Restablecer movimiento</button>
-          <p class="hint">Los atenuadores reducen la amplitud alrededor del frame de referencia. El suavizado amortigua cambios bruscos entre frames sin modificar el JSON.</p>
         </section>
 
         <section class="panel">
-          <h2>Estabilización</h2>
+          <h2>4 · Estabilización</h2>
           <label class="toggle-row">
             <span>
               <strong>Pies al suelo con IK</strong>
@@ -75,7 +80,13 @@
             <input id="footIK" type="checkbox" />
           </label>
           <button id="recaptureFeet">Volver a fijar pies acá</button>
-          <p class="hint">El IK se aplica después de la animación EMAGE original. Mantiene cada pie en su punto y con la orientación plana de reposo.</p>
+        </section>
+
+        <section class="panel">
+          <h2>5 · Exportar</h2>
+          <button id="exportJson" class="primary" disabled>Exportar JSON procesado</button>
+          <div id="exportStatus" class="file-name" style="margin-top:8px;">Cargá un JSON para exportar</div>
+          <p class="hint">Hornea frame de referencia, atenuación, suavizado e IK en un JSON nuevo para que la animación final conserve el aspecto del preview.</p>
         </section>
       </aside>
     </section>
@@ -84,6 +95,6 @@
   <script type="importmap">
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
   </script>
-  <script type="module" src="v2-fixed.js"></script>
+  <script type="module" src="v2-fixed.js?v=2.12"></script>
 </body>
 </html>
