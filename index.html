@@ -32,6 +32,17 @@
       <audio id="audio" preload="metadata"></audio>
     </section>
 
+    <section class="panel auth-panel" style="padding:14px 18px;margin-bottom:12px;">
+      <div class="audio-row">
+        <strong>Hugging Face / ZeroGPU</strong>
+        <input id="hfToken" type="password" placeholder="hf_…" autocomplete="off" style="min-width:280px;flex:1;max-width:520px;background:#0d1117;color:#eef2f7;border:1px solid #303949;border-radius:10px;padding:9px 11px;" />
+        <button id="saveHfToken">Usar token</button>
+        <button id="clearHfToken">Borrar</button>
+        <span id="hfAuthState" class="file-name">HF anónimo · cuota mínima</span>
+      </div>
+      <div class="file-name" style="margin-top:8px;white-space:normal;">El token queda sólo en sessionStorage de esta pestaña; no se guarda en GitHub. Cuenta Free autenticada: más cuota que anónimo, aunque los Spaces que reservan 180 s por llamada pueden seguir quedando justos para audios largos.</div>
+    </section>
+
     <section class="panel controls">
       <div class="control-group"><label>Vista</label><div class="segmented"><button data-view="front" class="view-button active">Frente</button><button data-view="side" class="view-button">Perfil</button><button data-view="threequarter" class="view-button">¾</button></div></div>
       <label class="check"><input id="showTrails" type="checkbox" /> Trails de manos</label>
@@ -50,8 +61,9 @@
   </main>
 
   <script type="importmap">
-  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","@gradio/client":"https://cdn.jsdelivr.net/npm/@gradio/client@2.5.1/dist/index.js","fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"}}
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","@gradio/client":"./gradio-auth-wrapper.js","@gradio/client-real":"https://cdn.jsdelivr.net/npm/@gradio/client@2.5.1/dist/index.js","fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"}}
   </script>
+  <script type="module" src="hf-auth.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="tango.js"></script>
   <script type="module" src="camn.js"></script>
