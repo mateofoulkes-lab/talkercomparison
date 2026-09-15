@@ -48,6 +48,8 @@ let playhead=0;
 let startedAt=0;
 let hasAudio=false;
 let audioUrl=null;
+let footIK=false;
+const footTargets={left:null,right:null};
 
 function resize(){const r=$('#viewer').getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(1,r.height);camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe($('#viewer'));resize();
@@ -124,6 +126,56 @@ function applyMotion(data,t){
     b.updateMatrixWorld(true);
   }
   modelRoot.updateMatrixWorld(true);
+  // IK se aplica DESPUES del retarget original, sin modificar su matematica.
+  if(footIK)solveFeetIK();
+}
+
+function footWorld(side){
+  const foot=bones[side==='left'?'leftFoot':'rightFoot'];
+  return foot?.getWorldPosition(new THREE.Vector3())||null;
+}
+
+function captureFootTargets(){
+  if(!modelRoot)return;
+  modelRoot.updateMatrixWorld(true);
+  const left=footWorld('left'),right=footWorld('right');
+  footTargets.left=left?left.clone():null;
+  footTargets.right=right?right.clone():null;
+}
+
+function rotateBoneToward(bone,effector,target){
+  const pivot=bone.getWorldPosition(new THREE.Vector3());
+  const end=effector.getWorldPosition(new THREE.Vector3());
+  const from=end.sub(pivot),to=target.clone().sub(pivot);
+  if(from.lengthSq()<1e-10||to.lengthSq()<1e-10)return;
+  const deltaWorld=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize());
+  const currentWorld=bone.getWorldQuaternion(new THREE.Quaternion());
+  const desiredWorld=deltaWorld.multiply(currentWorld);
+  const parentWorld=bone.parent?.getWorldQuaternion(new THREE.Quaternion())||qIdentity();
+  bone.quaternion.copy(parentWorld.invert().multiply(desiredWorld)).normalize();
+  bone.updateMatrixWorld(true);
+}
+
+function solveLegIK(side,target){
+  if(!target)return;
+  const upper=bones[side==='left'?'leftUpperLeg':'rightUpperLeg'];
+  const lower=bones[side==='left'?'leftLowerLeg':'rightLowerLeg'];
+  const foot=bones[side==='left'?'leftFoot':'rightFoot'];
+  if(!upper||!lower||!foot)return;
+  // CCD corto: parte siempre de la pose EMAGE y corrige solo muslo/rodilla.
+  for(let i=0;i<8;i++){
+    rotateBoneToward(lower,foot,target);
+    modelRoot.updateMatrixWorld(true);
+    rotateBoneToward(upper,foot,target);
+    modelRoot.updateMatrixWorld(true);
+    if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target)<0.0015)break;
+  }
+}
+
+function solveFeetIK(){
+  solveLegIK('left',footTargets.left);
+  solveLegIK('right',footTargets.right);
+  modelRoot.updateMatrixWorld(true);
 }
 
 function currentTime(){
@@ -170,8 +222,10 @@ $('#motionFile').addEventListener('change',async e=>{
     playing=false;seek(0);
     $('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;
     $('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;
+    $('#footIK').disabled=false;
     setStatus(`Movimiento listo · ${duration.toFixed(1)} s`,true);
     applyMotion(motion,0);
+    if(footIK)captureFootTargets();
   }catch(err){console.error(err);alert(`No pude cargar el JSON: ${err.message}`);}
 });
 
@@ -193,8 +247,21 @@ $('#clearAudio').addEventListener('click',()=>{
 
 $('#audio').addEventListener('ended',()=>setPlaying(false));
 $('#play').addEventListener('click',()=>setPlaying(!playing));
-$('#restart').addEventListener('click',()=>{playing=false;$('#audio').pause();seek(0);applyMotion(motion,0);syncUi();});
-$('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*duration);applyMotion(motion,currentTime());syncUi();});
+$('#restart').addEventListener('click',()=>{playing=false;$('#audio').pause();seek(0);applyMotion(motion,0);if(footIK)captureFootTargets();syncUi();});
+$('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*duration);applyMotion(motion,currentTime());if(footIK)captureFootTargets();syncUi();});
+$('#footIK').addEventListener('change',e=>{
+  footIK=e.target.checked;
+  if(footIK&&motion){
+    // Captura los pies en la pose actual y desde ahi los mantiene clavados.
+    applyMotion(motion,currentTime());
+    captureFootTargets();
+  }
+});
+$('#recaptureFeet').addEventListener('click',()=>{
+  if(!motion||!footIK)return;
+  applyMotion(motion,currentTime());
+  captureFootTargets();
+});
 
 function animate(){
   requestAnimationFrame(animate);
