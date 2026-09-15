@@ -20,6 +20,11 @@ const TARGET_SUFFIX={
   rightUpperLeg:['rightupleg'],rightLowerLeg:['rightleg'],rightFoot:['rightfoot']
 };
 
+const LEG_JOINTS=new Set([
+  'leftUpperLeg','leftLowerLeg','leftFoot',
+  'rightUpperLeg','rightLowerLeg','rightFoot'
+]);
+
 const normalize=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/^mixamorig/,'');
 const qIdentity=()=>new THREE.Quaternion();
 
@@ -49,6 +54,11 @@ let startedAt=0;
 let hasAudio=false;
 let audioUrl=null;
 let footIK=false;
+
+const motionSettings={legs:1,body:1,smooth:0};
+const smoothQuats=new Map();
+let lastSmoothTime=null;
+
 const footTargets={
   left:{position:null,rotation:null,groundY:null},
   right:{position:null,rotation:null,groundY:null}
@@ -104,28 +114,61 @@ function sample(data,t){
   return {a:frames[a],b:frames[b],alpha:f-a};
 }
 
-function sourceGlobals(sampled){
+function resetSmoothing(){
+  smoothQuats.clear();
+  lastSmoothTime=null;
+}
+
+function adjustedLocalQuat(joint,A,B,alpha,jumped){
+  let local=qIdentity();
+  if(A?.rotation&&B?.rotation){
+    const qa=new THREE.Quaternion(...A.rotation),qb=new THREE.Quaternion(...B.rotation);
+    local.copy(qa).slerp(qb,alpha).normalize();
+  }
+
+  // Atenuación: 0 = reposo, 1 = animación original.
+  const gain=LEG_JOINTS.has(joint)?motionSettings.legs:motionSettings.body;
+  local.slerpQuaternions(qIdentity(),local,THREE.MathUtils.clamp(gain,0,1)).normalize();
+
+  // Suavizado temporal por joint. A 0 no altera en absoluto la animación original.
+  const smooth=motionSettings.smooth;
+  if(smooth<=0.001)return local;
+
+  const prev=smoothQuats.get(joint);
+  if(!prev||jumped){
+    smoothQuats.set(joint,local.clone());
+    return local;
+  }
+
+  // Cuanto mayor el slider, más lentamente sigue al frame nuevo.
+  const follow=THREE.MathUtils.lerp(1,0.06,smooth);
+  prev.slerp(local,follow).normalize();
+  return prev.clone();
+}
+
+function sourceGlobals(sampled,t){
   const globals={};
+  const jumped=lastSmoothTime!==null&&(t<lastSmoothTime-0.02||Math.abs(t-lastSmoothTime)>0.25);
+  if(jumped)smoothQuats.clear();
+
   for(const joint of Object.keys(JOINT_PARENT)){
     const A=sampled.a?.joints?.[joint],B=sampled.b?.joints?.[joint]||A;
-    let local=qIdentity();
-    if(A?.rotation&&B?.rotation){
-      const qa=new THREE.Quaternion(...A.rotation),qb=new THREE.Quaternion(...B.rotation);
-      local.copy(qa).slerp(qb,sampled.alpha).normalize();
-    }
+    const local=adjustedLocalQuat(joint,A,B,sampled.alpha,jumped);
     const p=JOINT_PARENT[joint];
     globals[joint]=p&&globals[p]?globals[p].clone().multiply(local):local;
   }
+  lastSmoothTime=t;
   return globals;
 }
 
 // Copia fiel del retarget usado por human-preview.js original.
+// Los controles sólo modifican las rotaciones fuente antes de entrar acá.
 function applyMotion(data,t){
   if(!modelRoot||!Object.keys(bones).length)return;
   const s=sample(data,t);if(!s)return;
   for(const [joint,b] of Object.entries(bones))b.quaternion.copy(restLocal[joint]);
   modelRoot.updateMatrixWorld(true);
-  const src=sourceGlobals(s);
+  const src=sourceGlobals(s,t);
   for(const joint of Object.keys(JOINT_PARENT)){
     const b=bones[joint];if(!b||!src[joint]||!restWorld[joint])continue;
     const desiredWorld=src[joint].clone().multiply(restWorld[joint]);
@@ -214,6 +257,7 @@ function seek(t){
   t=Math.max(0,Math.min(duration,Number(t)||0));
   playhead=t;startedAt=performance.now();
   if(hasAudio){const a=$('#audio');if(Number.isFinite(a.duration)&&a.duration>0)a.currentTime=Math.min(t,a.duration);}
+  resetSmoothing();
 }
 
 async function setPlaying(on){
@@ -237,6 +281,32 @@ function syncUi(){
   if(duration>0&&document.activeElement!==$('#timeline'))$('#timeline').value=String(t/duration);
   $('#play').textContent=playing?'❚❚ Pausar':'▶ Reproducir';
 }
+
+function setMotionControl(key,value){
+  motionSettings[key]=Number(value);
+  resetSmoothing();
+  if(motion)applyMotion(motion,currentTime());
+}
+
+$('#legsGain').addEventListener('input',e=>{
+  setMotionControl('legs',e.target.value);
+  $('#legsGainValue').textContent=`${Math.round(motionSettings.legs*100)}%`;
+});
+$('#bodyGain').addEventListener('input',e=>{
+  setMotionControl('body',e.target.value);
+  $('#bodyGainValue').textContent=`${Math.round(motionSettings.body*100)}%`;
+});
+$('#smoothGain').addEventListener('input',e=>{
+  setMotionControl('smooth',e.target.value);
+  $('#smoothGainValue').textContent=`${Math.round(motionSettings.smooth*100)}%`;
+});
+$('#resetMotionControls').addEventListener('click',()=>{
+  motionSettings.legs=1;motionSettings.body=1;motionSettings.smooth=0;
+  $('#legsGain').value='1';$('#bodyGain').value='1';$('#smoothGain').value='0';
+  $('#legsGainValue').textContent='100%';$('#bodyGainValue').textContent='100%';$('#smoothGainValue').textContent='0%';
+  resetSmoothing();
+  if(motion)applyMotion(motion,currentTime());
+});
 
 $('#motionFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
