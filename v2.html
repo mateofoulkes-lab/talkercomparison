@@ -27,21 +27,15 @@
           <input id="timeline" type="range" min="0" max="1" step="0.0005" value="0" disabled />
           <span id="timeTotal">00:00.0</span>
         </div>
+        <div class="hint" style="padding:10px 14px 0;">Arrastrá sobre el modelo para rotar · rueda para zoom.</div>
       </div>
 
       <aside class="controls">
         <section class="panel">
           <h2>Archivos</h2>
-          <label class="upload">
-            <span>JSON EMAGE</span>
-            <input id="motionFile" type="file" accept="application/json,.json" />
-          </label>
+          <label class="upload"><span>JSON EMAGE</span><input id="motionFile" type="file" accept="application/json,.json" /></label>
           <div id="motionName" class="file-name">Sin movimiento</div>
-
-          <label class="upload optional">
-            <span>Audio opcional</span>
-            <input id="audioFile" type="file" accept="audio/*" />
-          </label>
+          <label class="upload optional"><span>Audio opcional</span><input id="audioFile" type="file" accept="audio/*" /></label>
           <div id="audioName" class="file-name">Sin audio · usa reloj interno</div>
           <button id="clearAudio" disabled>Quitar audio</button>
           <audio id="audio" preload="metadata"></audio>
@@ -65,7 +59,7 @@
             <input id="footIK" type="checkbox" />
           </label>
           <button id="recaptureFeet" disabled>Volver a fijar pies</button>
-          <p class="hint">Al activar IK, la posición actual de cada pie se convierte en su ancla. El solver corrige cadera/rodilla para mantenerlos ahí mientras el torso sigue gesticulando.</p>
+          <p class="hint">Al activar IK, la posición actual de cada pie se convierte en su ancla.</p>
         </section>
 
         <section class="panel">
@@ -83,6 +77,6 @@
   <script type="importmap">
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
   </script>
-  <script type="module" src="v2.js"></script>
+  <script type="module" src="v2-fixed.js"></script>
 </body>
 </html>
