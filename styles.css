@@ -36,6 +36,15 @@ input[type="range"] { width: 100%; accent-color: #a8b7ff; }
 .check { display: flex; align-items: center; gap: 7px; color: #b8c0cd; font-size: 13px; }
 .slider-label { display: flex; gap: 8px; align-items: center; margin-left: auto; min-width: min(100%, 330px); }
 .slider-label input { min-width: 140px; }
+.directed-panel { padding:18px; margin-bottom:12px; }
+.directed-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
+.colab-link { text-decoration:none; color:#0c1018; background:#edf2ff; padding:10px 14px; border-radius:12px; font-weight:800; white-space:nowrap; }
+.gesture-editor { display:grid; grid-template-columns:120px 120px auto minmax(260px,1fr) auto; gap:10px; align-items:end; margin-top:16px; }
+.gesture-editor label { color:#9fa9b8; font-size:12px; font-weight:700; display:grid; gap:5px; }
+.gesture-editor input { background:#0d1117; color:#eef2f7; border:1px solid #303949; border-radius:10px; padding:9px 11px; min-width:0; }
+.gesture-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.gesture-chip { display:flex; align-items:center; gap:8px; padding:7px 8px 7px 11px; border-radius:999px; border:1px solid #3b4660; background:#141a24; color:#cbd4e3; font-size:12px; }
+.gesture-chip button { padding:2px 7px; border-radius:999px; min-width:auto; }
 .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .viewer-card { background: #0f131a; border: 1px solid #222a36; border-radius: 18px; overflow: hidden; position: relative; min-height: 390px; }
 .viewer-head { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 15px 8px; }
@@ -52,6 +61,7 @@ input[type="range"] { width: 100%; accent-color: #a8b7ff; }
 .format-panel { padding: 18px; margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .secondary-upload { flex: 0 0 auto; }
 footer { color: #616a79; padding: 18px 4px 0; font-size: 12px; }
+@media (max-width: 1000px){ .gesture-editor{grid-template-columns:1fr 1fr auto}.gesture-editor #gesturePrompt{grid-column:1/-2}.directed-head{flex-direction:column}.colab-link{white-space:normal} }
 @media (max-width: 900px) {
   .comparison-grid { grid-template-columns: 1fr; }
   .slider-label { margin-left: 0; }
@@ -62,4 +72,5 @@ footer { color: #616a79; padding: 18px 4px 0; font-size: 12px; }
   .hero { flex-direction: column; }
   .timeline-row { grid-template-columns: 58px 1fr 58px; font-size: 12px; }
   .canvas-wrap { height: 275px; }
+  .gesture-editor{display:flex;flex-direction:column;align-items:stretch}
 }
