@@ -10,8 +10,8 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Mikves Lab · EMAGE · v2.2</p>
-        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.2</span></h1>
+        <p class="eyebrow">Mikves Lab · EMAGE · v2.3</p>
+        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.3</span></h1>
         <p class="subtitle">Preview humano del movimiento generado por EMAGE. El audio es opcional.</p>
       </div>
       <span id="modelStatus" class="status">Cargando Xbot…</span>
@@ -35,6 +35,7 @@
           <h2>Archivos</h2>
           <label class="upload"><span>JSON EMAGE</span><input id="motionFile" type="file" accept="application/json,.json" /></label>
           <div id="motionName" class="file-name">Sin movimiento</div>
+          <div id="diag" class="file-name" style="white-space:normal;margin-top:8px;">Rig Xbot: esperando modelo · JSON: esperando archivo</div>
           <label class="upload optional"><span>Audio opcional</span><input id="audioFile" type="file" accept="audio/*" /></label>
           <div id="audioName" class="file-name">Sin audio · usa reloj interno</div>
           <button id="clearAudio" disabled>Quitar audio</button>
