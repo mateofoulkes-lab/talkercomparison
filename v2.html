@@ -10,9 +10,9 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Mikves Lab · EMAGE · v2.4</p>
-        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.4</span></h1>
-        <p class="subtitle">Preview humano del movimiento generado por EMAGE. El audio es opcional.</p>
+        <p class="eyebrow">Mikves Lab · EMAGE · v2.5</p>
+        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.5</span></h1>
+        <p class="subtitle">Preview fiel al Talker Comparison original. Audio opcional.</p>
       </div>
       <span id="modelStatus" class="status">Cargando Xbot…</span>
     </header>
@@ -27,7 +27,6 @@
           <input id="timeline" type="range" min="0" max="1" step="0.0005" value="0" disabled />
           <span id="timeTotal">00:00.0</span>
         </div>
-        <div class="hint" style="padding:10px 14px 0;">Arrastrá sobre el modelo para rotar · rueda para zoom.</div>
       </div>
 
       <aside class="controls">
@@ -35,42 +34,14 @@
           <h2>Archivos</h2>
           <label class="upload"><span>JSON EMAGE</span><input id="motionFile" type="file" accept="application/json,.json" /></label>
           <div id="motionName" class="file-name">Sin movimiento</div>
-          <div id="diag" class="file-name" style="white-space:normal;margin-top:8px;">Rig Xbot: esperando modelo · JSON: esperando archivo</div>
+
           <label class="upload optional"><span>Audio opcional</span><input id="audioFile" type="file" accept="audio/*" /></label>
           <div id="audioName" class="file-name">Sin audio · usa reloj interno</div>
           <button id="clearAudio" disabled>Quitar audio</button>
           <audio id="audio" preload="metadata"></audio>
         </section>
 
-        <section class="panel">
-          <h2>Atenuación</h2>
-          <label class="slider"><span>Global</span><input id="globalGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="globalGainValue">1.00×</b></label>
-          <label class="slider"><span>Torso</span><input id="torsoGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="torsoGainValue">1.00×</b></label>
-          <label class="slider"><span>Brazos</span><input id="armsGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="armsGainValue">1.00×</b></label>
-          <label class="slider"><span>Cabeza</span><input id="headGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="headGainValue">1.00×</b></label>
-          <label class="slider"><span>Piernas</span><input id="legsGain" type="range" min="0" max="1.5" value="1" step="0.01"><b id="legsGainValue">1.00×</b></label>
-          <label class="slider"><span>Suavizado</span><input id="smoothGain" type="range" min="0" max="0.92" value="0.15" step="0.01"><b id="smoothGainValue">0.15</b></label>
-          <button id="resetGains">Restablecer</button>
-        </section>
-
-        <section class="panel">
-          <h2>Estabilización</h2>
-          <label class="toggle-row">
-            <span><strong>Clavar pies al suelo</strong><small>IK de dos piernas tras aplicar EMAGE</small></span>
-            <input id="footIK" type="checkbox" />
-          </label>
-          <button id="recaptureFeet" disabled>Volver a fijar pies</button>
-          <p class="hint">Al activar IK, la posición actual de cada pie se convierte en su ancla.</p>
-        </section>
-
-        <section class="panel">
-          <h2>Vista</h2>
-          <div class="segmented">
-            <button data-view="front" class="view active">Frente</button>
-            <button data-view="threequarter" class="view">¾</button>
-            <button data-view="side" class="view">Perfil</button>
-          </div>
-        </section>
+        <!-- Atenuadores e IK deshabilitados temporalmente hasta validar el preview base. -->
       </aside>
     </section>
   </main>
