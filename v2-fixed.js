@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/utils/SkeletonUtils.js';
 
 const MODEL_URL='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r180/examples/models/gltf/Xbot.glb';
 const $=s=>document.querySelector(s);
@@ -13,6 +14,15 @@ const JOINT_PARENT={
   rightUpperLeg:'hips',rightLowerLeg:'rightUpperLeg',rightFoot:'rightLowerLeg'
 };
 
+// Same simple zero-pose used by the original Talker Comparison source skeleton.
+const REST={
+  hips:[0,1.02,0],spine:[0,.20,0],chest:[0,.30,0],neck:[0,.25,0],head:[0,.20,0],
+  leftShoulder:[-.18,.05,0],leftUpperArm:[-.18,0,0],leftForeArm:[-.31,0,0],leftHand:[-.27,0,0],
+  rightShoulder:[.18,.05,0],rightUpperArm:[.18,0,0],rightForeArm:[.31,0,0],rightHand:[.27,0,0],
+  leftUpperLeg:[-.11,-.08,0],leftLowerLeg:[0,-.45,0],leftFoot:[0,-.43,.08],
+  rightUpperLeg:[.11,-.08,0],rightLowerLeg:[0,-.45,0],rightFoot:[0,-.43,.08]
+};
+
 const TARGET_SUFFIX={
   hips:['hips'],spine:['spine'],chest:['spine2','spine1'],neck:['neck'],head:['head'],
   leftShoulder:['leftshoulder'],leftUpperArm:['leftarm'],leftForeArm:['leftforearm'],leftHand:['lefthand'],
@@ -20,7 +30,6 @@ const TARGET_SUFFIX={
   leftUpperLeg:['leftupleg'],leftLowerLeg:['leftleg'],leftFoot:['leftfoot'],
   rightUpperLeg:['rightupleg'],rightLowerLeg:['rightleg'],rightFoot:['rightfoot']
 };
-
 const GROUP={
   hips:'torso',spine:'torso',chest:'torso',neck:'head',head:'head',
   leftShoulder:'arms',leftUpperArm:'arms',leftForeArm:'arms',leftHand:'arms',
@@ -44,22 +53,53 @@ const floor=new THREE.Mesh(new THREE.CircleGeometry(1.25,64),new THREE.MeshStand
 camera.position.set(0,1.18,4);
 const orbit=new OrbitControls(camera,renderer.domElement);orbit.target.set(0,1.05,0);orbit.enableDamping=true;orbit.dampingFactor=.08;orbit.minDistance=1.7;orbit.maxDistance=8;orbit.update();
 
-let modelRoot=null;const bones={},restLocal={},restWorld={};
 const normalize=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/^mixamorig/,'');
-const qIdentity=()=>new THREE.Quaternion();
 function findBone(joint,all){const wanted=TARGET_SUFFIX[joint]||[];for(const w of wanted){const b=all.find(x=>normalize(x.name)===w);if(b)return b;}for(const w of wanted){const b=all.find(x=>normalize(x.name).endsWith(w));if(b)return b;}return null;}
 function setStatus(text,real=false){const el=$('#modelStatus');el.textContent=text;el.classList.toggle('real',real);}
+function setDiag(){
+  const mapped=Object.keys(targetBones).length;
+  let animated=0;
+  const f=state.motion?.frames?.[0];
+  for(const j of Object.keys(JOINT_PARENT))if(f?.joints?.[j]?.rotation) animated++;
+  $('#diag').textContent=`Rig Xbot: ${mapped}/19 huesos · JSON: ${animated}/19 joints animados · retarget oficial Three.js`;
+}
+
+// Build an actual source Skeleton whose joints/names exactly match the JSON.
+const sourceRoot=new THREE.Group();sourceRoot.visible=false;scene.add(sourceRoot);
+const sourceBones={};
+for(const [joint,parentName] of Object.entries(JOINT_PARENT)){
+  const b=new THREE.Bone();b.name=joint;b.position.fromArray(REST[joint]);sourceBones[joint]=b;
+  if(parentName)sourceBones[parentName].add(b);else sourceRoot.add(b);
+}
+const sourceSkeleton=new THREE.Skeleton(Object.values(sourceBones));
+sourceRoot.updateMatrixWorld(true);
+
+let modelRoot=null,targetSkin=null;
+const targetBones={};
+let retargetNames={};
 
 new GLTFLoader().load(MODEL_URL,gltf=>{
-  modelRoot=gltf.scene;scene.add(modelRoot);modelRoot.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false;}});
-  const all=[];modelRoot.traverse(o=>{if(o.isBone)all.push(o);});
-  for(const joint of Object.keys(JOINT_PARENT)){const b=findBone(joint,all);if(b){bones[joint]=b;restLocal[joint]=b.quaternion.clone();}}
-  modelRoot.updateMatrixWorld(true);for(const [joint,b] of Object.entries(bones))restWorld[joint]=b.getWorldQuaternion(new THREE.Quaternion());
+  modelRoot=gltf.scene;scene.add(modelRoot);
+  const all=[];
+  modelRoot.traverse(o=>{
+    if(o.isMesh){o.frustumCulled=false;o.castShadow=false;o.receiveShadow=false;}
+    if(o.isSkinnedMesh&&!targetSkin)targetSkin=o;
+    if(o.isBone)all.push(o);
+  });
+  for(const joint of Object.keys(JOINT_PARENT)){
+    const b=findBone(joint,all);if(b)targetBones[joint]=b;
+  }
+  // SkeletonUtils expects { targetBoneName: sourceBoneName }.
+  retargetNames={};for(const [joint,b] of Object.entries(targetBones))retargetNames[b.name]=joint;
+
   const box=new THREE.Box3().setFromObject(modelRoot),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
   const scale=size.y>0?1.75/size.y:1;modelRoot.scale.multiplyScalar(scale);modelRoot.position.x-=center.x*scale;modelRoot.position.z-=center.z*scale;modelRoot.position.y-=box.min.y*scale;
-  modelRoot.updateMatrixWorld(true);for(const [joint,b] of Object.entries(bones))restWorld[joint]=b.getWorldQuaternion(new THREE.Quaternion());
-  const missing=Object.keys(JOINT_PARENT).filter(j=>!bones[j]);setStatus(missing.length?`Xbot listo · faltan ${missing.length} bones`:'Xbot listo · cargá JSON EMAGE',true);
-  if(missing.length)console.warn('Bones faltantes:',missing,all.map(b=>b.name));if(state.motion)applyMotion(currentTime());
+  modelRoot.updateMatrixWorld(true);
+  const missing=Object.keys(JOINT_PARENT).filter(j=>!targetBones[j]);
+  setStatus(!targetSkin?'Xbot cargó pero no encontré SkinnedMesh':(missing.length?`Xbot listo · faltan ${missing.length} huesos`:'Xbot listo · cargá JSON EMAGE'),!!targetSkin);
+  if(missing.length)console.warn('Bones faltantes:',missing,all.map(b=>b.name));
+  setDiag();
+  if(state.motion)applyMotion(currentTime());
 },undefined,err=>{console.error(err);setStatus('Error cargando Xbot');});
 
 function resize(){const r=$('#viewer').getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/Math.max(1,r.height);camera.updateProjectionMatrix();}
@@ -68,25 +108,48 @@ function formatTime(sec){sec=Math.max(0,Number(sec)||0);const m=Math.floor(sec/6
 function currentTime(){if(state.hasAudio){const a=$('#audio');return Math.min(state.duration,Number(a.currentTime)||0);}if(!state.playing)return state.playhead;return Math.min(state.duration,state.playhead+(performance.now()-state.startedAt)/1000);}
 function seek(t){t=Math.max(0,Math.min(state.duration,Number(t)||0));state.playhead=t;state.startedAt=performance.now();if(state.hasAudio){const a=$('#audio');if(Number.isFinite(a.duration)&&a.duration>0)a.currentTime=Math.min(t,a.duration);}resetFilter();}
 async function setPlaying(on){if(!state.motion)return;const now=currentTime();if(on){if(now>=state.duration-.001)seek(0);else{state.playhead=now;state.startedAt=performance.now();}state.playing=true;if(state.hasAudio){try{await $('#audio').play();}catch(e){console.warn(e);state.playing=false;}}}else{state.playhead=now;state.startedAt=performance.now();state.playing=false;if(state.hasAudio)$('#audio').pause();}syncUi();}
-
 function sample(t){const frames=state.motion?.frames||[];if(!frames.length)return null;const fps=Number(state.motion.fps)||30,f=Math.max(0,Math.min(frames.length-1,t*fps));const a=Math.floor(f),b=Math.min(frames.length-1,a+1);return {a:frames[a],b:frames[b],alpha:f-a};}
 function resetFilter(){state.filtered.clear();state.lastTime=null;}
 function jointGain(j){return state.gains.global*(state.gains[GROUP[j]]??1);}
-function filteredLocal(j,A,B,alpha,t){let local=qIdentity();if(A?.rotation&&B?.rotation){const qa=new THREE.Quaternion(...A.rotation),qb=new THREE.Quaternion(...B.rotation);local.copy(qa).slerp(qb,alpha).normalize();}const g=Math.max(0,Math.min(1.5,jointGain(j)));local.slerpQuaternions(qIdentity(),local,g).normalize();const smooth=state.gains.smooth;if(smooth<=.001)return local;const prev=state.filtered.get(j);const jumped=state.lastTime!=null&&(t<state.lastTime-.05||Math.abs(t-state.lastTime)>.25);if(!prev||jumped){state.filtered.set(j,local.clone());return local;}const follow=Math.max(.04,1-smooth*.94);prev.slerp(local,follow).normalize();return prev.clone();}
-function sourceGlobals(sampled,t){const globals={};for(const joint of Object.keys(JOINT_PARENT)){const A=sampled.a?.joints?.[joint],B=sampled.b?.joints?.[joint]||A;const local=filteredLocal(joint,A,B,sampled.alpha,t);const p=JOINT_PARENT[joint];globals[joint]=p&&globals[p]?globals[p].clone().multiply(local):local;}state.lastTime=t;return globals;}
+function filteredLocal(j,A,B,alpha,t){
+  let q=new THREE.Quaternion();
+  if(A?.rotation){q.fromArray(A.rotation);if(B?.rotation)q.slerp(new THREE.Quaternion().fromArray(B.rotation),alpha);q.normalize();}
+  const g=Math.max(0,Math.min(1.5,jointGain(j)));q.slerpQuaternions(new THREE.Quaternion(),q,g).normalize();
+  const smooth=state.gains.smooth;if(smooth<=.001)return q;
+  const prev=state.filtered.get(j),jumped=state.lastTime!=null&&(t<state.lastTime-.05||Math.abs(t-state.lastTime)>.25);
+  if(!prev||jumped){state.filtered.set(j,q.clone());return q;}const follow=Math.max(.04,1-smooth*.94);prev.slerp(q,follow).normalize();return prev.clone();
+}
+function driveSource(s,t){
+  for(const j of Object.keys(JOINT_PARENT)){
+    const A=s.a?.joints?.[j],B=s.b?.joints?.[j]||A;
+    sourceBones[j].quaternion.copy(filteredLocal(j,A,B,s.alpha,t));
+  }
+  state.lastTime=t;sourceRoot.updateMatrixWorld(true);
+}
 
-// Proven retarget copied from the original human-preview.js.
-function applyMotion(t){if(!modelRoot||!state.motion||!Object.keys(bones).length)return;const s=sample(t);if(!s)return;for(const [joint,b] of Object.entries(bones))b.quaternion.copy(restLocal[joint]);modelRoot.updateMatrixWorld(true);const src=sourceGlobals(s,t);for(const joint of Object.keys(JOINT_PARENT)){const b=bones[joint];if(!b||!src[joint]||!restWorld[joint])continue;const desiredWorld=src[joint].clone().multiply(restWorld[joint]);const parentWorld=b.parent?.getWorldQuaternion(new THREE.Quaternion())||qIdentity();b.quaternion.copy(parentWorld.invert().multiply(desiredWorld)).normalize();b.updateMatrixWorld(true);}modelRoot.updateMatrixWorld(true);if(state.footIK)solveFeet();}
+function applyMotion(t){
+  if(!targetSkin||!state.motion)return;
+  const s=sample(t);if(!s)return;
+  driveSource(s,t);
+  SkeletonUtils.retarget(targetSkin,sourceSkeleton,{
+    names:retargetNames,
+    hip:'hips',
+    hipInfluence:new THREE.Vector3(0,0,0),
+    preserveBonePositions:true,
+    preserveBoneMatrix:true
+  });
+  modelRoot.updateMatrixWorld(true);
+  if(state.footIK)solveFeet();
+}
 
-function footWorld(side){const b=bones[side==='left'?'leftFoot':'rightFoot'];return b?.getWorldPosition(new THREE.Vector3())||null;}
+function footWorld(side){const b=targetBones[side==='left'?'leftFoot':'rightFoot'];return b?.getWorldPosition(new THREE.Vector3())||null;}
 function captureFeet(){if(!modelRoot||!state.motion)return;modelRoot.updateMatrixWorld(true);state.footTargets.left=footWorld('left');state.footTargets.right=footWorld('right');$('#recaptureFeet').disabled=!(state.footTargets.left&&state.footTargets.right);}
-function rotateBoneToward(bone,effector,target){const pivot=bone.getWorldPosition(new THREE.Vector3()),from=effector.getWorldPosition(new THREE.Vector3()).sub(pivot),to=target.clone().sub(pivot);if(from.lengthSq()<1e-8||to.lengthSq()<1e-8)return;const deltaWorld=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize()),world=bone.getWorldQuaternion(new THREE.Quaternion()),desired=deltaWorld.multiply(world),parentWorld=bone.parent?.getWorldQuaternion(new THREE.Quaternion())||qIdentity();bone.quaternion.copy(parentWorld.invert().multiply(desired)).normalize();bone.updateMatrixWorld(true);}
-function solveLeg(side,target){if(!target)return;const upper=bones[side==='left'?'leftUpperLeg':'rightUpperLeg'],lower=bones[side==='left'?'leftLowerLeg':'rightLowerLeg'],foot=bones[side==='left'?'leftFoot':'rightFoot'];if(!upper||!lower||!foot)return;for(let i=0;i<6;i++){rotateBoneToward(lower,foot,target);modelRoot.updateMatrixWorld(true);rotateBoneToward(upper,foot,target);modelRoot.updateMatrixWorld(true);if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target)<.002)break;}}
+function rotateBoneToward(bone,effector,target){const pivot=bone.getWorldPosition(new THREE.Vector3()),from=effector.getWorldPosition(new THREE.Vector3()).sub(pivot),to=target.clone().sub(pivot);if(from.lengthSq()<1e-8||to.lengthSq()<1e-8)return;const deltaWorld=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize()),world=bone.getWorldQuaternion(new THREE.Quaternion()),desired=deltaWorld.multiply(world),parentWorld=bone.parent?.getWorldQuaternion(new THREE.Quaternion())||new THREE.Quaternion();bone.quaternion.copy(parentWorld.invert().multiply(desired)).normalize();bone.updateMatrixWorld(true);}
+function solveLeg(side,target){if(!target)return;const upper=targetBones[side==='left'?'leftUpperLeg':'rightUpperLeg'],lower=targetBones[side==='left'?'leftLowerLeg':'rightLowerLeg'],foot=targetBones[side==='left'?'leftFoot':'rightFoot'];if(!upper||!lower||!foot)return;for(let i=0;i<6;i++){rotateBoneToward(lower,foot,target);modelRoot.updateMatrixWorld(true);rotateBoneToward(upper,foot,target);modelRoot.updateMatrixWorld(true);if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target)<.002)break;}}
 function solveFeet(){solveLeg('left',state.footTargets.left);solveLeg('right',state.footTargets.right);}
-
 function syncUi(){const t=currentTime();$('#timeNow').textContent=formatTime(t);$('#timeTotal').textContent=formatTime(state.duration);if(state.duration>0&&document.activeElement!==$('#timeline'))$('#timeline').value=String(t/state.duration);$('#play').textContent=state.playing?'❚❚ Pausar':'▶ Reproducir';}
 
-$('#motionFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.frames)||!data.frames.length)throw new Error('El JSON no contiene frames[]');state.motion=data;state.duration=data.frames.length/(Number(data.fps)||30);state.playing=false;seek(0);$('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;$('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;setStatus(`Movimiento listo · ${state.duration.toFixed(1)} s`,true);applyMotion(0);if(state.footIK)captureFeet();}catch(err){console.error(err);alert(`No pude cargar el JSON: ${err.message}`);}});
+$('#motionFile').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!Array.isArray(data.frames)||!data.frames.length)throw new Error('El JSON no contiene frames[]');state.motion=data;state.duration=data.frames.length/(Number(data.fps)||30);state.playing=false;seek(0);$('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;$('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;setStatus(`Movimiento listo · ${state.duration.toFixed(1)} s`,true);setDiag();applyMotion(0);if(state.footIK)captureFeet();}catch(err){console.error(err);alert(`No pude cargar el JSON: ${err.message}`);}});
 $('#audioFile').addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=URL.createObjectURL(file);const a=$('#audio');a.src=state.audioUrl;state.hasAudio=true;$('#audioName').textContent=file.name;$('#clearAudio').disabled=false;a.addEventListener('loadedmetadata',()=>{if(Number.isFinite(a.duration)&&a.duration>0)a.currentTime=Math.min(state.playhead,a.duration);},{once:true});});
 $('#clearAudio').addEventListener('click',()=>{const t=currentTime(),a=$('#audio');a.pause();a.removeAttribute('src');a.load();if(state.audioUrl)URL.revokeObjectURL(state.audioUrl);state.audioUrl=null;state.hasAudio=false;state.playhead=t;state.startedAt=performance.now();$('#audioFile').value='';$('#audioName').textContent='Sin audio · usa reloj interno';$('#clearAudio').disabled=true;});
 $('#audio').addEventListener('ended',()=>setPlaying(false));$('#play').addEventListener('click',()=>setPlaying(!state.playing));$('#restart').addEventListener('click',()=>{state.playing=false;$('#audio').pause();seek(0);applyMotion(0);if(state.footIK)captureFeet();});$('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*state.duration);applyMotion(currentTime());});
