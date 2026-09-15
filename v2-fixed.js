@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
 
 const MODEL_URL='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r180/examples/models/gltf/Xbot.glb';
+const COLAB_URL='https://colab.research.google.com/github/mateofoulkes-lab/talkercomparison/blob/main/colab/talkercomparison_pantomatrix.ipynb';
 const $=s=>document.querySelector(s);
 
 const JOINT_PARENT={
@@ -47,6 +48,7 @@ let bones={};
 let restLocal={};
 let restWorld={};
 let motion=null;
+let motionFileBase='emage-motion';
 let duration=0;
 let playing=false;
 let playhead=0;
@@ -54,6 +56,7 @@ let startedAt=0;
 let hasAudio=false;
 let audioUrl=null;
 let footIK=false;
+let exporting=false;
 
 const motionSettings={legs:1,body:1,smooth:0};
 const smoothQuats=new Map();
@@ -116,10 +119,7 @@ function sample(data,t){
   return {a:frames[a],b:frames[b],alpha:f-a};
 }
 
-function resetSmoothing(){
-  smoothQuats.clear();
-  lastSmoothTime=null;
-}
+function resetSmoothing(){smoothQuats.clear();lastSmoothTime=null;}
 
 function rawLocalQuat(A,B,alpha){
   const local=qIdentity();
@@ -142,31 +142,19 @@ function captureReferencePose(){
   referenceTime=t;
   resetSmoothing();
   $('#referenceInfo').textContent=`Referencia: ${formatTime(t)}`;
-  if(motion)applyMotion(motion,t);
+  applyMotion(motion,t);
 }
 
 function adjustedLocalQuat(joint,A,B,alpha,jumped){
   const local=rawLocalQuat(A,B,alpha);
-
-  // 0 = frame de referencia elegido; 1 = animación original.
-  // Si todavía no se definió referencia, conserva el comportamiento anterior (T-pose/identidad).
   const gain=LEG_JOINTS.has(joint)?motionSettings.legs:motionSettings.body;
   const reference=referenceQuats.get(joint)||qIdentity();
-  const attenuated=new THREE.Quaternion().slerpQuaternions(
-    reference,
-    local,
-    THREE.MathUtils.clamp(gain,0,1)
-  ).normalize();
+  const attenuated=new THREE.Quaternion().slerpQuaternions(reference,local,THREE.MathUtils.clamp(gain,0,1)).normalize();
 
   const smooth=motionSettings.smooth;
   if(smooth<=0.001)return attenuated;
-
   const prev=smoothQuats.get(joint);
-  if(!prev||jumped){
-    smoothQuats.set(joint,attenuated.clone());
-    return attenuated;
-  }
-
+  if(!prev||jumped){smoothQuats.set(joint,attenuated.clone());return attenuated;}
   const follow=THREE.MathUtils.lerp(1,0.06,smooth);
   prev.slerp(attenuated,follow).normalize();
   return prev.clone();
@@ -176,7 +164,6 @@ function sourceGlobals(sampled,t){
   const globals={};
   const jumped=lastSmoothTime!==null&&(t<lastSmoothTime-0.02||Math.abs(t-lastSmoothTime)>0.25);
   if(jumped)smoothQuats.clear();
-
   for(const joint of Object.keys(JOINT_PARENT)){
     const A=sampled.a?.joints?.[joint],B=sampled.b?.joints?.[joint]||A;
     const local=adjustedLocalQuat(joint,A,B,sampled.alpha,jumped);
@@ -187,8 +174,6 @@ function sourceGlobals(sampled,t){
   return globals;
 }
 
-// Copia fiel del retarget usado por human-preview.js original.
-// Los controles sólo modifican las rotaciones fuente antes de entrar acá.
 function applyMotion(data,t){
   if(!modelRoot||!Object.keys(bones).length)return;
   const s=sample(data,t);if(!s)return;
@@ -262,11 +247,7 @@ function solveLegIK(side,target){
   modelRoot.updateMatrixWorld(true);
 }
 
-function solveFeetIK(){
-  solveLegIK('left',footTargets.left);
-  solveLegIK('right',footTargets.right);
-  modelRoot.updateMatrixWorld(true);
-}
+function solveFeetIK(){solveLegIK('left',footTargets.left);solveLegIK('right',footTargets.right);modelRoot.updateMatrixWorld(true);}
 
 function currentTime(){
   if(hasAudio){const a=$('#audio');return Math.min(duration,Number(a.currentTime)||0);}
@@ -303,45 +284,106 @@ function syncUi(){
   $('#play').textContent=playing?'❚❚ Pausar':'▶ Reproducir';
 }
 
-function setMotionControl(key,value){
-  motionSettings[key]=Number(value);
-  resetSmoothing();
-  if(motion)applyMotion(motion,currentTime());
+function setMotionControl(key,value){motionSettings[key]=Number(value);resetSmoothing();if(motion)applyMotion(motion,currentTime());}
+
+function bakedFrameFromCurrentPose(originalFrame){
+  modelRoot.updateMatrixWorld(true);
+  const globals={};
+  for(const joint of Object.keys(JOINT_PARENT)){
+    const b=bones[joint];
+    if(!b||!restWorld[joint])continue;
+    const world=b.getWorldQuaternion(new THREE.Quaternion());
+    globals[joint]=world.multiply(restWorld[joint].clone().invert()).normalize();
+  }
+  const joints={};
+  for(const joint of Object.keys(JOINT_PARENT)){
+    const g=globals[joint];if(!g)continue;
+    const p=JOINT_PARENT[joint];
+    const local=p&&globals[p]?globals[p].clone().invert().multiply(g).normalize():g.clone();
+    joints[joint]={rotation:[local.x,local.y,local.z,local.w]};
+  }
+  return {root:originalFrame?.root?JSON.parse(JSON.stringify(originalFrame.root)):{position:[0,0,0]},joints};
 }
 
-$('#legsGain').addEventListener('input',e=>{
-  setMotionControl('legs',e.target.value);
-  $('#legsGainValue').textContent=`${Math.round(motionSettings.legs*100)}%`;
-});
-$('#bodyGain').addEventListener('input',e=>{
-  setMotionControl('body',e.target.value);
-  $('#bodyGainValue').textContent=`${Math.round(motionSettings.body*100)}%`;
-});
-$('#smoothGain').addEventListener('input',e=>{
-  setMotionControl('smooth',e.target.value);
-  $('#smoothGainValue').textContent=`${Math.round(motionSettings.smooth*100)}%`;
-});
+async function exportProcessedJSON(){
+  if(!motion||!modelRoot||exporting)return;
+  exporting=true;
+  const btn=$('#exportJson');
+  const status=$('#exportStatus');
+  const restoreTime=currentTime();
+  const resume=playing;
+  playing=false;
+  if(hasAudio)$('#audio').pause();
+  btn.disabled=true;
+  resetSmoothing();
+  const fps=Number(motion.fps)||30;
+  const frames=[];
+  try{
+    for(let i=0;i<motion.frames.length;i++){
+      const t=i/fps;
+      applyMotion(motion,t);
+      frames.push(bakedFrameFromCurrentPose(motion.frames[i]));
+      if(i%50===0){
+        const pct=Math.round((i+1)/motion.frames.length*100);
+        status.textContent=`Procesando ${pct}%…`;
+        await new Promise(requestAnimationFrame);
+      }
+    }
+    const out={
+      ...motion,
+      generator:`${motion.generator||'EMAGE'} + Talker Comparison V2 baked`,
+      frames,
+      processing:{
+        tool:'Talker Comparison EMAGE Preview',
+        version:'2.12',
+        legs_gain:motionSettings.legs,
+        body_gain:motionSettings.body,
+        smoothing:motionSettings.smooth,
+        reference_time_sec:referenceTime,
+        foot_ik:footIK
+      }
+    };
+    const blob=new Blob([JSON.stringify(out)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`${motionFileBase}-procesado.json`;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status.textContent=`Listo · ${frames.length} frames exportados`;
+  }catch(err){
+    console.error(err);status.textContent='Error al exportar';alert(`No pude exportar el JSON: ${err.message}`);
+  }finally{
+    exporting=false;btn.disabled=!motion;
+    resetSmoothing();seek(restoreTime);applyMotion(motion,restoreTime);
+    if(resume)setPlaying(true);else syncUi();
+  }
+}
+
+$('#legsGain').addEventListener('input',e=>{setMotionControl('legs',e.target.value);$('#legsGainValue').textContent=`${Math.round(motionSettings.legs*100)}%`;});
+$('#bodyGain').addEventListener('input',e=>{setMotionControl('body',e.target.value);$('#bodyGainValue').textContent=`${Math.round(motionSettings.body*100)}%`;});
+$('#smoothGain').addEventListener('input',e=>{setMotionControl('smooth',e.target.value);$('#smoothGainValue').textContent=`${Math.round(motionSettings.smooth*100)}%`;});
 $('#setReferencePose').addEventListener('click',()=>captureReferencePose());
 $('#resetMotionControls').addEventListener('click',()=>{
   motionSettings.legs=1;motionSettings.body=1;motionSettings.smooth=0;
   $('#legsGain').value='1';$('#bodyGain').value='1';$('#smoothGain').value='0';
   $('#legsGainValue').textContent='100%';$('#bodyGainValue').textContent='100%';$('#smoothGainValue').textContent='0%';
-  resetSmoothing();
-  if(motion)applyMotion(motion,currentTime());
+  resetSmoothing();if(motion)applyMotion(motion,currentTime());
 });
+$('#openColab').addEventListener('click',()=>window.open(COLAB_URL,'_blank','noopener,noreferrer'));
+$('#exportJson').addEventListener('click',()=>exportProcessedJSON());
 
 $('#motionFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
   try{
     const data=JSON.parse(await file.text());
     if(!Array.isArray(data.frames)||!data.frames.length)throw new Error('El JSON no contiene frames[]');
-    motion=data;
+    motion=data;motionFileBase=file.name.replace(/\.json$/i,'')||'emage-motion';
     referenceQuats.clear();referenceTime=null;
     $('#referenceInfo').textContent='Referencia: T-pose (por defecto)';
     duration=data.frames.length/(Number(data.fps)||30);
     playing=false;seek(0);
     $('#motionName').textContent=`${file.name} · ${data.frames.length} frames · ${Number(data.fps)||30} FPS`;
-    $('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;
+    $('#play').disabled=false;$('#restart').disabled=false;$('#timeline').disabled=false;$('#exportJson').disabled=false;
+    $('#exportStatus').textContent='Listo para exportar';
     setStatus(`Movimiento listo · ${duration.toFixed(1)} s`,true);
     applyMotion(motion,0);
     if(footIK)captureFootTargets();
@@ -368,21 +410,12 @@ $('#audio').addEventListener('ended',()=>setPlaying(false));
 $('#play').addEventListener('click',()=>setPlaying(!playing));
 $('#restart').addEventListener('click',()=>{playing=false;$('#audio').pause();seek(0);applyMotion(motion,0);if(footIK)captureFootTargets();syncUi();});
 $('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*duration);applyMotion(motion,currentTime());if(footIK)captureFootTargets();syncUi();});
-$('#footIK').addEventListener('change',e=>{
-  footIK=e.target.checked;
-  if(footIK&&motion){
-    applyMotion(motion,currentTime());
-    captureFootTargets();
-  }
-});
-$('#recaptureFeet').addEventListener('click',()=>{
-  if(!motion||!footIK)return;
-  applyMotion(motion,currentTime());
-  captureFootTargets();
-});
+$('#footIK').addEventListener('change',e=>{footIK=e.target.checked;if(footIK&&motion){applyMotion(motion,currentTime());captureFootTargets();}});
+$('#recaptureFeet').addEventListener('click',()=>{if(!motion||!footIK)return;applyMotion(motion,currentTime());captureFootTargets();});
 
 function animate(){
   requestAnimationFrame(animate);
+  if(exporting){renderer.render(scene,camera);return;}
   let t=currentTime();
   if(playing&&!hasAudio&&t>=duration){playing=false;playhead=duration;t=duration;}
   if(motion)applyMotion(motion,t);
