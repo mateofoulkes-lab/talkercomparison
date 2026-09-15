@@ -40,7 +40,23 @@
         <button id="clearHfToken">Borrar</button>
         <span id="hfAuthState" class="file-name">HF anónimo · cuota mínima</span>
       </div>
-      <div class="file-name" style="margin-top:8px;white-space:normal;">El token queda sólo en sessionStorage de esta pestaña; no se guarda en GitHub. Cuenta Free autenticada: más cuota que anónimo, aunque los Spaces que reservan 180 s por llamada pueden seguir quedando justos para audios largos.</div>
+      <div class="file-name" style="margin-top:8px;white-space:normal;">El token queda sólo en sessionStorage de esta pestaña; no se guarda en GitHub.</div>
+    </section>
+
+    <section class="panel directed-panel">
+      <div class="directed-head">
+        <div><p class="eyebrow">Dirección manual</p><h2>Gestos dirigidos</h2><p class="subtitle">Marcá un rango y escribí una instrucción. Se hornea sobre el movimiento generado con entrada/salida suavizadas.</p></div>
+        <a class="colab-link" href="https://colab.research.google.com/github/mateofoulkes-lab/talkercomparison/blob/main/colab/talkercomparison_pantomatrix.ipynb" target="_blank" rel="noopener">Abrir backend en Google Colab ↗</a>
+      </div>
+      <div class="gesture-editor">
+        <label>Inicio <input id="gestureStart" type="number" min="0" step="0.1" value="0"></label>
+        <label>Fin <input id="gestureEnd" type="number" min="0.1" step="0.1" value="1.5"></label>
+        <button id="gestureNow">Usar tiempo actual</button>
+        <input id="gesturePrompt" type="text" placeholder="Ej.: señala con el pulgar derecho hacia atrás" />
+        <button id="addGesture" class="primary">Agregar gesto</button>
+      </div>
+      <div id="gestureList" class="gesture-list"></div>
+      <div class="file-name" style="white-space:normal;margin-top:8px;">Presets reconocidos ahora: pulgar atrás, señalar izquierda/derecha, presentar con ambas manos y encogerse de hombros. La instrucción original queda guardada como metadata.</div>
     </section>
 
     <section class="panel controls">
@@ -64,6 +80,7 @@
   {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","@gradio/client":"./gradio-auth-wrapper.js","@gradio/client-real":"https://cdn.jsdelivr.net/npm/@gradio/client@2.5.1/dist/index.js","fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"}}
   </script>
   <script type="module" src="hf-auth.js"></script>
+  <script type="module" src="directed-gestures.js"></script>
   <script type="module" src="app.js"></script>
   <script type="module" src="tango.js"></script>
   <script type="module" src="camn.js"></script>
