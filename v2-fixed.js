@@ -127,22 +127,28 @@ function adjustedLocalQuat(joint,A,B,alpha,jumped){
   }
 
   // Atenuación: 0 = reposo, 1 = animación original.
+  // IMPORTANTE: no usar `local` como destino y fuente del mismo slerp,
+  // porque Three.js pisa el quaternion fuente al empezar la operación.
   const gain=LEG_JOINTS.has(joint)?motionSettings.legs:motionSettings.body;
-  local.slerpQuaternions(qIdentity(),local,THREE.MathUtils.clamp(gain,0,1)).normalize();
+  const attenuated=new THREE.Quaternion().slerpQuaternions(
+    qIdentity(),
+    local,
+    THREE.MathUtils.clamp(gain,0,1)
+  ).normalize();
 
   // Suavizado temporal por joint. A 0 no altera en absoluto la animación original.
   const smooth=motionSettings.smooth;
-  if(smooth<=0.001)return local;
+  if(smooth<=0.001)return attenuated;
 
   const prev=smoothQuats.get(joint);
   if(!prev||jumped){
-    smoothQuats.set(joint,local.clone());
-    return local;
+    smoothQuats.set(joint,attenuated.clone());
+    return attenuated;
   }
 
   // Cuanto mayor el slider, más lentamente sigue al frame nuevo.
   const follow=THREE.MathUtils.lerp(1,0.06,smooth);
-  prev.slerp(local,follow).normalize();
+  prev.slerp(attenuated,follow).normalize();
   return prev.clone();
 }
 
@@ -177,7 +183,6 @@ function applyMotion(data,t){
     b.updateMatrixWorld(true);
   }
   modelRoot.updateMatrixWorld(true);
-  // IK se aplica DESPUES del retarget original, sin modificar su matematica.
   if(footIK)solveFeetIK();
 }
 
@@ -195,7 +200,6 @@ function captureFootTargets(){
     const p=foot.getWorldPosition(new THREE.Vector3());
     p.y=restFootGroundY[side]??p.y;
     footTargets[side].position=p;
-    // La orientación de reposo del Xbot ya tiene la planta plana.
     footTargets[side].rotation=restWorld[side==='left'?'leftFoot':'rightFoot']?.clone()||foot.getWorldQuaternion(new THREE.Quaternion());
     footTargets[side].groundY=p.y;
   }
@@ -227,7 +231,6 @@ function solveLegIK(side,target){
   const lower=bones[side==='left'?'leftLowerLeg':'rightLowerLeg'];
   const foot=bones[side==='left'?'leftFoot':'rightFoot'];
   if(!upper||!lower||!foot)return;
-  // CCD: parte de la pose EMAGE y corrige muslo/rodilla para llegar al tobillo clavado.
   for(let i=0;i<10;i++){
     rotateBoneToward(lower,foot,target.position);
     modelRoot.updateMatrixWorld(true);
@@ -235,8 +238,6 @@ function solveLegIK(side,target){
     modelRoot.updateMatrixWorld(true);
     if(foot.getWorldPosition(new THREE.Vector3()).distanceTo(target.position)<0.0008)break;
   }
-  // Después del CCD anulamos por completo la rotación heredada de EMAGE en el pie.
-  // Queda con la misma orientación mundial de la pose de reposo: plano e inmóvil.
   setBoneWorldRotation(foot,target.rotation);
   modelRoot.updateMatrixWorld(true);
 }
@@ -347,7 +348,6 @@ $('#timeline').addEventListener('input',e=>{seek(Number(e.target.value)*duration
 $('#footIK').addEventListener('change',e=>{
   footIK=e.target.checked;
   if(footIK&&motion){
-    // Captura X/Z actuales, baja el pie a su altura de reposo y bloquea su rotación plana.
     applyMotion(motion,currentTime());
     captureFootTargets();
   }
