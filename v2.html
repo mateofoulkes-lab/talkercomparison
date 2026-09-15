@@ -10,8 +10,8 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">Mikves Lab · EMAGE · v2.5</p>
-        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.5</span></h1>
+        <p class="eyebrow">Mikves Lab · EMAGE · v2.6</p>
+        <h1>EMAGE Preview V2 <span style="font-size:.45em;opacity:.55;vertical-align:middle;">v2.6</span></h1>
         <p class="subtitle">Preview fiel al Talker Comparison original. Audio opcional.</p>
       </div>
       <span id="modelStatus" class="status">Cargando Xbot…</span>
@@ -41,7 +41,20 @@
           <audio id="audio" preload="metadata"></audio>
         </section>
 
-        <!-- Atenuadores e IK deshabilitados temporalmente hasta validar el preview base. -->
+        <section class="panel">
+          <h2>Estabilización</h2>
+          <label class="toggle-row">
+            <span>
+              <strong>Pies al suelo con IK</strong>
+              <small>Clava ambos pies en la pose actual sin tocar el retarget base.</small>
+            </span>
+            <input id="footIK" type="checkbox" disabled />
+          </label>
+          <button id="recaptureFeet">Volver a fijar pies acá</button>
+          <p class="hint">El IK se aplica después de la animación EMAGE original. Si movés la timeline con IK activo, esa nueva pose pasa a ser el punto de anclaje.</p>
+        </section>
+
+        <!-- Atenuadores deshabilitados temporalmente hasta validar el IK. -->
       </aside>
     </section>
   </main>
